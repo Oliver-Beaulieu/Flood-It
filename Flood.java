@@ -1,416 +1,369 @@
-// Assignment 9, Part 2
-// Angell-James Will
-// willangelljames
-// Heath Kassidy
-// kassidy25
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Arrays;
 import java.util.Random;
 
-import tester.*;
 import javalib.impworld.*;
-
 import java.awt.Color;
-
 import javalib.worldimages.*;
+import tester.*;
 
-// main world class
-class Flood extends World {
-  ArrayList<Cell> cells;
-
-  // CHANGE GRID SIZE HERE //
-  static final int gridsize = 20;
-  // CHANGE GRIDE SIZE HERE //
-
-  int howManyColors;
-  // hash contains all the available colours
-  HashMap<Integer, Color> hash;
-  static final int cellSize = 20;
-  Random rand = new Random();
-  int numOfClicks;
-
-  Flood(ArrayList<Cell> cells, int howManyColors, HashMap<Integer, Color> hash) {
-    this.cells = cells;
-    this.howManyColors = howManyColors;
-    this.hash = hash;
-    this.numOfClicks = Flood.gridsize + (Math.floorDiv(Flood.gridsize, 2));
-    // these two methods below need to be in the contructor, not in makeScene,
-    // otherwise it keeps getting called on each tick
-    this.makePosn();
-    this.makePartner();
-  }
-
-  // the background image of the game
-  static final WorldImage background = new RectangleImage(Flood.gridsize * Flood.gridsize,
-      Flood.gridsize * Flood.gridsize, OutlineMode.SOLID, Color.WHITE);
-
-  // renders the game. Places each cell on the background at the point specified
-  // by each cell.
-  public WorldScene makeScene() {
-    WorldScene acc = this.getEmptyScene();
-    acc.placeImageXY(background, (gridsize * gridsize) / 2, (gridsize * gridsize) / 2);
-    for (Cell c : cells) {
-      // the purpose of the arithmatic here is to scale the cells to appear on
-      // the top left initially - they appear in the middle naturally
-      // c.color has already been set in makePosn ^^
-      acc.placeImageXY(c.drawCell(c.color), c.x * Flood.cellSize + Flood.cellSize / 2, c.y
-          * Flood.cellSize + Flood.cellSize / 2);
-      acc.placeImageXY((new TextImage(Integer.toString(this.goodNumOfClicks()), cellSize,
-          Color.WHITE)), gridsize * cellSize / 2, cellSize / 2);
-    }
-    return acc;
-  }
-
-  public void onKeyEvent(String key) {
-    if (key.equals("x")) {
-      this.makeFinalScene("Goodbye!");
-      this.makeScene();
-    }
-    else {
-      if (key.equals("r")) {
-        new Flood(this.cells, this.howManyColors, this.hash);
-        this.numOfClicks = Flood.gridsize + (Math.floorDiv(Flood.gridsize, 2));
-        this.makeScene();
-      }
-    }
-  }
-
-  // make posn for each cell
-  public void makePosn() {
-    for (int row = 0; row < (gridsize * gridsize) / gridsize; row++) {
-      for (int col = 0; col < (gridsize * gridsize) / gridsize; col++) {
-        this.cells.add(new Cell(col, row, this.hash.get(rand.nextInt(this.goodNumOfColors())),
-            false));
-      }
-    }
-  }
-
-  // the end of the world
-  public WorldEnd worldEnds() {
-    if (this.allCellsFlooded() && (this.goodNumOfClicks() > 0)) {
-      return new WorldEnd(true, this.makeFinalScene("You win!"));
-    }
-    else {
-      new WorldEnd(false, this.makeScene());
-    }
-    if (this.goodNumOfClicks() == 0) {
-      return new WorldEnd(true, this.makeFinalScene("Game Over - Out of Clicks"));
-    }
-    return new WorldEnd(false, this.makeScene());
-  }
-
-  public WorldScene makeFinalScene(String s) {
-    WorldScene acc = this.getEmptyScene();
-    acc.placeImageXY(background, gridsize * cellSize / 2, gridsize * cellSize / 2);
-    acc.placeImageXY((new TextImage(s, cellSize, Color.BLACK)), gridsize * cellSize / 2, gridsize
-        * cellSize / 2);
-    return acc;
-  }
-
-  public void onMouseClicked(Posn pos) {
-    this.mainClick(getClickedCell(pos));
-    this.numOfClicks -= 1;
-  }
-
-  // get clicked cell/its color
-  // new method that goes through the board
-  // check if each cell is flooded,
-  // if so, change the color and check if its neighbors are the same color as
-  // the cell you clicked on
-  // if it is, set those to flooded as well
-  public void mainClick(Cell clickedcell) {
-    for (Cell c : cells) {
-      if (c.isFlooded) {
-        c.color = clickedcell.color;
-        if (c.left != null && c.left.color.equals(clickedcell.color)) {
-          c.left.isFlooded = true;
-        }
-        if (c.right != null && c.right.color.equals(clickedcell.color)) {
-          c.right.isFlooded = true;
-        }
-        if (c.bottom != null && c.bottom.color.equals(clickedcell.color)) {
-          c.bottom.isFlooded = true;
-        }
-        if (c.top != null && c.top.color.equals(clickedcell.color)) {
-          c.top.isFlooded = true;
-        }
-      }
-    }
-  }
-
-  // helper function that compares an X and a Y value to an ArrayList<Cell3> and
-  // returns the Cell3 from the ArrayList that touches the given X or Y.
-  // this helps determine which Cell3 was clicked on.
-  public Cell getClickedCell(Posn loc) { // 22 89
-    return this.cells.get((Math.floorDiv(loc.x, Flood.cellSize))
-        + (Math.floorDiv(loc.y, Flood.cellSize) * gridsize));
-  }
-
-  // a helper function that
-  // checks if the number of colors is between 3 and 8 inclusive, else throws an
-  // exception. The limit of the online game is 3 to 8 colors so we thought we
-  // would use the same range.
-  public int goodNumOfColors() {
-    if (this.howManyColors <= 8 && this.howManyColors >= 3) {
-      return this.howManyColors;
-    }
-    else {
-      throw new RuntimeException("Please use between 3 & 9 colours");
-    }
-  }
-
-  // helper to determine whether player has lost
-  public int goodNumOfClicks() {
-    if (this.numOfClicks < 0) {
-      return 0;
-    }
-    else {
-      return this.numOfClicks;
-    }
-  }
-
-  // a helper function that checks if all cells in an ArrayList<Cell> are
-  // flooded
-  public boolean allCellsFlooded() {
-    boolean isTrue = true;
-    for (Cell c : cells) {
-      if (!(c.isFlooded)) {
-        isTrue = false;
-      }
-    }
-    return isTrue;
-  }
-
-  // make top, left, right & bottom for the Cell3
-  public void makePartner() {
-    cells.get(0).isFlooded = true;
-    for (int index = 0; index <= ((Flood.gridsize * Flood.gridsize) - 1); index++) {
-      if (cells.get(index).x > 0) {
-        cells.get(index).left = cells.get(index - 1);
-      }
-      else {
-        cells.get(index).left = null;
-      }
-      if (cells.get(index).x < gridsize - 1) {
-        cells.get(index).right = cells.get(index + 1);
-      }
-      else {
-        cells.get(index).right = null;
-      }
-      if (cells.get(index).y > 0) {
-        cells.get(index).top = cells.get(index - gridsize);
-      }
-      else {
-        cells.get(index).top = null;
-      }
-
-      if (cells.get(index).y < gridsize - 1) {
-        cells.get(index).bottom = (cells.get(index + gridsize));
-      }
-      else {
-        cells.get(index).bottom = null;
-      }
-    }
-  }
-}
-
-// Represents a single square of the game area
+// Represents a cell 
 class Cell {
-  // In logical coordinates, with the origin at the top-left corner of the
-  // screen
   int x;
   int y;
   Color color;
-  boolean isFlooded;
-  // the four adjacent cells to this one
+  boolean flooded;
   Cell left;
   Cell top;
   Cell right;
   Cell bottom;
 
-  Cell(int x, int y, Color color, boolean isFlooded) {
+  Cell(int x, int y, Color color) {
     this.x = x;
     this.y = y;
     this.color = color;
-    this.isFlooded = isFlooded;
-    this.left = null;
-    this.right = null;
-    this.top = null;
-    this.bottom = null;
+    this.flooded = false;
   }
 
-  public WorldImage drawCell(Color color2) {
-    return new RectangleImage(Flood.cellSize, Flood.cellSize, "solid", color2);
+  // Draws each cell individually
+  WorldImage drawCell() {
+    return new RectangleImage(20, 20, OutlineMode.SOLID, this.color);
+  }
+
+  // EFFECT: Changes left and right to given cell
+  // Helper function for initBoard, sets left to a given cell and the given cell.right to this
+  void setPointersLeft(Cell that) {
+    this.left = that;
+    that.right = this;
+  }
+
+  // EFFECT: Changes top and bottom to given cell
+  //Helper function for initBoard, sets top to a given cell, and the given bottom to this
+  void setPointersTop(Cell that) {
+    this.top = that;
+    that.bottom = this;
   }
 }
 
-class Examples {
+// Represents a flood it world
+class FloodItWorld extends World {
+  ArrayList<Cell> board;
+  int size;
+  int numColors;
+  int cellSize = 20;
+  int steps;
+  int time;
+  int tickCount;
+  int maxSteps;
+  boolean gameWon;
+  boolean gameLost;
 
-  // some sample cells
-  Cell maincell;
-  Cell cell2;
-  Cell cell3;
-  Cell cell4;
-  Cell cell5;
-
-  ArrayList<Cell> testList = new ArrayList<Cell>();
-
-  public void TestCellsVoid() {
-    maincell = new Cell(9, 8, Color.CYAN, false);
-    cell2 = new Cell(90, 90, Color.BLUE, false);
-    cell3 = new Cell(3, 1, Color.GREEN, false);
+  FloodItWorld(int size, int numColors) {
+    this.size = size;
+    this.numColors = numColors;
+    this.board = new ArrayList<Cell>();
+    this.steps = 0;
+    this.gameLost = false;
+    this.initBoard();
+  }
+  
+  FloodItWorld(int size, int numColors, int maxSteps) {
+    this.size = size;
+    this.numColors = numColors;
+    this.board = new ArrayList<Cell>();
+    this.steps = 0;
+    this.time = 0;
+    this.tickCount = 0;
+    this.maxSteps = this.size + this.numColors;
+    this.gameLost = false;
+    this.initBoard();
   }
 
-  // an empty list
-  ArrayList<Cell> mtlist = new ArrayList<Cell>();
+  // EFFECT: initilizes the board with cells
+  // Initialize the board with cells
+  void initBoard() {
+    ArrayList<Color> colors = new ArrayList<Color>(Arrays.asList(Color.RED, Color.GREEN, Color.BLUE,
+        Color.ORANGE, Color.MAGENTA, Color.PINK));
 
-  // intial flood
-  Flood f2;
-
-  // hashmap of colours
-  HashMap<Integer, Color> allcolors = new HashMap<Integer, Color>();
-  // random
-  Random rand = new Random();
-
-  void createColors() {
-    // here is the list of all possible colors. You can only go up
-    // to 8 colors, just like in the online game.
-    allcolors.put(7, Color.WHITE);
-    allcolors.put(6, Color.BLACK);
-    allcolors.put(3, Color.BLUE);
-    allcolors.put(1, Color.YELLOW);
-    allcolors.put(2, Color.RED);
-    allcolors.put(4, new Color(225, 120, 0));
-    allcolors.put(5, Color.magenta);
-    allcolors.put(0, Color.GREEN);
-
+    Random rand = new Random();
+    for (int y = 0; y < size; y++) {
+      for (int x = 0; x < size; x++) {
+        Color color = colors.get(rand.nextInt(numColors));
+        Cell cell = new Cell(x, y, color);
+        this.board.add(cell);
+        if (x > 0) {
+          cell.setPointersLeft(this.board.get(this.board.size() - 2));
+        }
+        if (y > 0) {
+          cell.setPointersTop(this.board.get(this.board.size() - size - 1));
+        }
+      }
+    }
+    Cell originalCell = this.getCell(0, 0);
+    originalCell.flooded = true;
+    this.floodHelper(originalCell, originalCell.color);
+    System.out.println(this.board.size());
   }
 
-  // tests drawCell
-  public boolean testDrawCell(Tester t) {
-    this.TestCellsVoid();
-    return t.checkExpect(maincell.drawCell(Color.BLUE), new RectangleImage(20, 20, "solid",
-        Color.BLUE))
-        && t.checkExpect(cell2.drawCell(Color.GREEN), new RectangleImage(20, 20, "solid",
-            Color.GREEN));
+  // Returns the cell at a given x and y
+  Cell getCell(int x, int y) {
+    return this.board.get(y * this.size + x);
+  }
+  
+  // EFFECT: Updates scene every tick
+  // Updates flood game scene every tick
+  public void onTick() {
+    this.tickCount ++;
+    if (this.tickCount % 15 == 0) {
+      this.time++;
+    }
+    this.makeScene();
   }
 
-  // test randomColor
-  public boolean testRandColor(Tester t) {
-    this.createColors();
-    new Flood(testList, 5, allcolors);
-    Color c = testList.get(0).color;
-    Color c2 = testList.get(1).color;
-    return t.checkNumRange(c.getRed(), 0, 256) && t.checkNumRange(c2.getBlue(), 0, 256)
-        && t.checkNumRange(c2.getGreen(), 0, 256);
+  // Draws the game scene
+  public WorldScene makeScene() {
+    WorldScene scene = new WorldScene(this.size * this.cellSize, this.size * this.cellSize); 
+    if (this.gameWon) {
+     scene.placeImageXY(new TextImage("You win!", 40, Color.black),
+         this.size * this.cellSize / 2, this.size * this.cellSize / 2);
+     return scene;
+    }
+    if (this.gameLost) {
+      scene.placeImageXY(new TextImage("You lose!", 40, Color.red),
+          this.size * this.cellSize / 2, this.size * this.cellSize / 2);
+      return scene;
+    }
+    for (Cell cell : this.board) {
+      scene.placeImageXY(cell.drawCell(), cell.x * this.cellSize + this.cellSize / 2, 
+          cell.y * this.cellSize + this.cellSize / 2);
+    }
+    
+    scene.placeImageXY(new TextImage("Steps taken: " + this.steps,
+        20, Color.BLACK), 100, this.size * this.cellSize + 20);
+    
+    scene.placeImageXY(new TextImage("Max steps: " + this.maxSteps,
+        20, Color.BLACK), 100, this.size * this.cellSize + 50);
+    
+    scene.placeImageXY(new TextImage("Time Elapsed: " + this.time,
+        20, Color.BLACK), 100, this.size * this.cellSize + 80);
+    
+    return scene;
+}
+    
+  // EFFECT: floods cells on click
+  // Convert grid cells on click
+  public void onMouseClicked(Posn pos) {
+    int x = pos.x / this.cellSize;
+    int y = pos.y / this.cellSize;
+    Cell clicked = this.getCell(x, y);
+    Color original = this.getCell(0, 0).color;
+    
+    // Only flood if the clicked cell is not the same color as the original flooded area
+    if (!clicked.color.equals(original)) {
+      System.out.println("CLICK");
+      this.flood(clicked.color);
+      this.steps++;
+      
+      if (this.allFlooded()) {
+        this.gameWon = true;
+        System.out.println("WON");
+      }
+      if (this.steps > this.maxSteps) {
+        this.gameLost = true;
+      }
+    }
+  }
+  
+  
+  // EFFECT: Re-inits board
+  // Resets board if "r" key is pressed
+  public void onKeyEvent(String keyPress) {
+    if (keyPress.equals("r")) {
+      this.steps = 0;
+      this.gameWon = false;
+      this.gameLost = false;
+      this.time = 0;
+      this.board.clear();
+      this.initBoard();
+    }
   }
 
-  // test makePartner
-  public boolean testmakePartner(Tester t) {
-    this.createColors();
-    new Flood(testList, 6, allcolors);
-    return t.checkExpect(testList.get(0).x, 0)
-        && t.checkExpect(testList.get(Flood.gridsize + 1).x, 1)
-        && t.checkExpect(testList.get(Flood.gridsize + 3).y, 1);
+  // EFFECT: adds touching cells to flood
+  // Fills the flood in the grid
+  void flood(Color target) {
+    Color original = this.getCell(0, 0).color;
+    if (original.equals(target)) {
+      return;
+    }
+    ArrayList<Cell> toFlood = new ArrayList<Cell>();
+    for (Cell cell : this.board) {
+      if (cell.flooded) {
+        toFlood.add(cell);
+      }
+    }
+    for (Cell cell : toFlood) {
+      cell.color = target;
+      this.floodHelper(cell, target);
+    }
   }
 
-  // test makePartner
-  public boolean testmakePosn(Tester t) {
-    this.createColors();
-    new Flood(testList, 6, allcolors);
-    return t.checkExpect(testList.get(0), testList.get(0));
+  // EFFECT: Changes color of cells of the same original color
+  // Helper method for flood fill that spreads the color to all cells of the same original color
+  void floodHelper(Cell cell, Color target) {
+    if (cell != null && (cell.color.equals(target))) {
+      cell.color = target;
+      cell.flooded = true;
+      if (cell.left != null && !cell.left.flooded) {
+        this.floodHelper(cell.left, target);
+      }
+      if (cell.top != null && !cell.top.flooded) {
+        this.floodHelper(cell.top, target);
+      }
+      if (cell.right != null && !cell.right.flooded) {
+        this.floodHelper(cell.right, target);
+      }
+      if (cell.bottom != null && !cell.bottom.flooded) {
+        this.floodHelper(cell.bottom, target);
+      }
+    }
   }
 
-  // test good colours higher howManyColors than should be
-  public boolean testgoodColours1(Tester t) {
-    Flood f5 = new Flood(testList, 4, allcolors);
-    int f4 = 9;
-    f5.howManyColors = f4;
-    return t.checkException(new RuntimeException("Please use between 3 & 9 colours"), f5,
-        "goodNumOfColors");
+  //Returns whether or not the entire board is flooded
+  boolean allFlooded() {
+    System.out.println("WORKING");
+    for (Cell cell : this.board) {
+      if (!cell.flooded) {
+        return false;
+      }
+    }
+    return true;
   }
+}
 
-  // test good colours lower howManyColors than should be
-  public boolean testgoodColours2(Tester t) {
-    Flood f5 = new Flood(testList, 4, allcolors);
-    int f4 = 1;
-    f5.howManyColors = f4;
-    return t.checkException(new RuntimeException("Please use between 3 & 9 colours"), f5,
-        "goodNumOfColors");
-  }
 
-  // test get clickedcell
-  public boolean testgetclickedCell(Tester t) {
-    this.createColors();
-    Flood f5 = new Flood(testList, 6, allcolors);
-    return t.checkExpect(f5.getClickedCell(new Posn(40, 59)), testList.get(42))
-        && t.checkExpect(f5.getClickedCell(new Posn(100, 60)), testList.get(65))
-        && t.checkExpect(f5.getClickedCell(new Posn(22, 89)), testList.get(81));
-  }
+// Represents examples of Flood It game
+class ExamplesGame {
 
-  // testing randomInt
-  boolean testrandomInt(Tester t) {
-    return t.checkOneOf("test randomInt", this.rand.nextInt(6), 0, 1, 2, 3, 4, 5, 6)
-        && t.checkOneOf("test randomInt", this.rand.nextInt(13), 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
-            10, 11, 12, 13)
-            && t.checkNoneOf("test randomInt", this.rand.nextInt(10), 11, 12, 13, 14, 15, 16);
-  }
-
-  // test background, can change gridsize above in Flood class, and this test
-  // won't be affected :)
-  // The second test WILL be affected though, so change that
-  // boolean testBackground(Tester t) {
-  // // /Flood f6 = new Flood(testList, 6, allcolors, 20);
-  // return t.checkExpect(Flood.background, new RectangleImage(Flood.gridsize *
-  // 20,
-  // Flood.gridsize * 20, OutlineMode.SOLID, Color.WHITE))
-  // && t.checkExpect(Flood.background, new RectangleImage(400, 400,
-  // OutlineMode.SOLID,
-  // Color.WHITE));
-  // }
-
-  // HOW TO TEST FOR A WORLDSCENE?!
-  // // test make a final scene, returns worldScene
-  // boolean testmakeafinalScene(Tester t) {
-  // this.createColors();
-  // Flood f3 = new Flood(testList, 7, allcolors);
-  // return t.checkExpect(f3.makeFinalScene("Hello!"), new
-  // WorldScene.placeImageXY(Flood.background, Flood.gridsize * Flood.cellSize /
-  // 2, Flood.gridsize * Flood.cellSize / 2);
-  // .placeImageXY((new TextImage("Hello!", 40, Color.BLACK)), Flood.gridsize *
-  // Flood.cellSize / 2, Flood.gridsize
-  // * Flood.cellSize / 2));
-  // }
-
-  // test
-
-  // test goodNumOfClicks
-  boolean testGoodNumOfClicks(Tester t) {
-    this.createColors();
-    Flood f1 = new Flood(testList, 5, allcolors);
-    return t.checkExpect(f1.goodNumOfClicks(), Flood.gridsize
-        + (Math.floorDiv(Flood.gridsize, 2)))
-        && t.checkExpect(f1.goodNumOfClicks() - 10, 20)
-        && t.checkExpect(f1.goodNumOfClicks() - 30, 0);
-  }
-
-  // test on key event
-  boolean testonKeyEvent(Tester t) {
-    this.createColors();
-    Flood f1 = new Flood(testList, 5, allcolors);
-    f1.onKeyEvent("r");
-    return t.checkExpect(f1.howManyColors, 5);
-  }
+  Cell cellOne;
+  Cell cellTwo;
+  FloodItWorld worldOne;
+  FloodItWorld worldTwo;
 
   void initData() {
-    this.createColors();
-    // 8 colours, no more than 8, no less than 3
-    f2 = new Flood(mtlist, 3, allcolors);
+    cellOne = new Cell(10, 10, Color.RED);
+    cellTwo = new Cell(20, 20, Color.BLUE);
+    worldOne = new FloodItWorld(50, 6, 10);
+    worldTwo = new FloodItWorld(25, 3, 10);
   }
 
   void testGame(Tester t) {
-    this.initData();
-    f2.bigBang(Flood.gridsize * Flood.gridsize, Flood.gridsize * Flood.gridsize, 0.1);
+    int size = 10;
+    
+    FloodItWorld world = new FloodItWorld(size, 5, 100);
+    world.bigBang(300, 300, 0.1); 
+  }
 
+  void testSetPointersLeft(Tester t) {
+    Cell c1 = new Cell(0, 0, Color.RED);
+    Cell c2 = new Cell(1, 0, Color.RED);
+    c2.setPointersLeft(c1);
+    t.checkExpect(c2.left, c1);
+    t.checkExpect(c1.right, c2);
+  }
+
+  void testSetPointersTop(Tester t) {
+    Cell c1 = new Cell(0, 0, Color.RED);
+    Cell c2 = new Cell(0, 1, Color.RED);
+    c2.setPointersTop(c1);
+    t.checkExpect(c2.top, c1);
+    t.checkExpect(c1.bottom, c2);  
+  }
+
+  void testInitBoard(Tester t) {
+    FloodItWorld testWorld1 = new FloodItWorld(50, 6, 10);
+    t.checkExpect(testWorld1.board.size(), 2500);
+    FloodItWorld testWorld2 = new FloodItWorld(100, 5, 10);
+    t.checkExpect(testWorld2.board.size(), 10000);
+  }
+
+  boolean testDrawCell(Tester t) {
+    initData();
+    WorldImage image1 = cellOne.drawCell();
+    WorldImage image2 = cellTwo.drawCell();
+    WorldImage sceneExpected = new RectangleImage(20, 20, OutlineMode.SOLID, Color.red);
+    WorldImage sceneExpected2 = new RectangleImage(20, 20, OutlineMode.SOLID, Color.blue);
+    return t.checkExpect(image1, sceneExpected) 
+        &&
+        t.checkExpect(image2, sceneExpected2);
+  }
+
+  void testGetCell(Tester t) {
+    initData();
+    t.checkExpect(worldOne.getCell(0, 0).flooded, true);
+    t.checkExpect(worldOne.getCell(1, 1).flooded, false);
+  }
+
+  boolean testOnMouseClicked(Tester t) {
+    initData();
+    Cell supercell = worldOne.getCell(0, 0);
+    Cell supercell2 = worldOne.getCell(0, 0);
+    supercell.color = Color.RED;
+    supercell2.color = Color.yellow;
+    worldOne.getCell(1, 0).color = Color.blue;
+    worldOne.onMouseClicked(new Posn(25, 15));
+    return t.checkExpect(supercell.color, Color.BLUE) 
+        &&
+        t.checkExpect(supercell2.color, Color.BLUE);
+  }
+
+  boolean makeScene(Tester t) {
+    initData();
+    WorldScene scene1 = worldOne.makeScene();
+    WorldScene scene2 = worldTwo.makeScene();
+    return t.checkExpect(scene1.width, worldOne.size * worldOne.cellSize) 
+        &&
+        t.checkExpect(scene1.height, worldOne.size * worldOne.cellSize) 
+        &&
+        t.checkExpect(scene2.width, worldOne.size * worldOne.cellSize) 
+        &&
+        t.checkExpect(scene2.height, worldOne.size * worldOne.cellSize);
+  }
+
+  boolean testFlood(Tester t) {
+    initData();
+    worldOne.getCell(0, 0).color = Color.RED;
+    worldOne.getCell(1, 0).color = Color.RED;
+    worldOne.getCell(0, 1).color = Color.RED;
+    worldOne.flood(Color.BLUE);
+    return t.checkExpect(worldOne.getCell(0, 0).color, Color.BLUE) 
+        &&
+        t.checkExpect(worldOne.getCell(1, 0).color, Color.RED);
+  }
+
+  boolean testFloodHelper(Tester t) {
+    initData();
+    Cell cell1 = worldOne.getCell(0, 0);
+    Cell cell2 = worldOne.getCell(1, 0);
+    Cell cell3 = worldOne.getCell(0, 1);
+    cell1.color = Color.RED;
+    cell2.color = Color.RED;
+    cell3.color = Color.RED;
+    cell1.flooded = true;
+    worldOne.floodHelper(cell1, Color.BLUE);
+    return t.checkExpect(cell1.color, Color.BLUE) 
+        && t.checkExpect(cell2.color, Color.BLUE) 
+        && t.checkExpect(cell3.color, Color.BLUE);
+  }
+
+  void testAllFlooded(Tester t) {
+    initData();
+    for (Cell cell : worldOne.board) { 
+      cell.flooded = true;
+    }
+
+    t.checkExpect(worldOne.allFlooded(), true);
+
+    worldOne.getCell(0, 0).flooded = false;
+    t.checkExpect(worldOne.allFlooded(), false);
   }
 }
